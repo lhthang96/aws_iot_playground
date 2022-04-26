@@ -1,0 +1,26 @@
+{
+  "presets": [
+    "@babel/env",
+    "@babel/typescript",
+    "@babel/preset-react"
+  ],
+  "plugins": [
+    [
+      "module-resolver",
+      {
+        "alias": {
+          "src": "./src"
+        }
+      }
+    ],
+    [
+      "transform-imports",
+      {
+        "react-bootstrap": {
+          "transform": "react-bootstrap/esm/${member}",
+          "preventFullImport": true
+        }
+      }
+    ]
+  ]
+}
