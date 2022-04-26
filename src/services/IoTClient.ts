@@ -1,8 +1,9 @@
 import { Auth } from '@aws-amplify/auth';
 import defaultsDeep from 'lodash.defaultsdeep';
 import mqtt, { ClientSubscribeCallback, IClientSubscribeOptions, MqttClient } from 'mqtt';
-import { Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subject } from 'rxjs';
 import { AWSUtils } from './AWSUtils';
+import { IoTClientStatus } from './IoTClient.interfaces';
 
 const DEFAULT_SUBSCRIBE_OPTIONS: IClientSubscribeOptions = {
   qos: 0,
@@ -33,7 +34,8 @@ export class IoTClient {
 
   private isFirstConnect = true;
   public client: MqttClient | null = null;
-  public status: 'initializing' | 'connected' | 'error' | 'reconnecting' = 'initializing';
+  public status: IoTClientStatus = 'initializing';
+  public status$ = new BehaviorSubject<IoTClientStatus>('initializing');
 
   public init = async (): Promise<void> => {
     const credentials = await Auth.currentCredentials();
@@ -46,7 +48,7 @@ export class IoTClient {
     });
 
     this.client.on('connect', () => {
-      this.status = 'connected';
+      this.updateStatus('connected');
       console.log('Connected to AWS IoT.');
 
       if (!this.isFirstConnect) {
@@ -57,12 +59,12 @@ export class IoTClient {
     });
 
     this.client.on('error', (error) => {
-      this.status = 'error';
+      this.updateStatus('error');
       console.log('Log on error', error);
     });
 
     this.client.on('reconnect', () => {
-      this.status = 'reconnecting';
+      this.updateStatus('reconnecting');
       console.log('Retrying to connect to AWS IoT...');
     });
   };
@@ -75,6 +77,11 @@ export class IoTClient {
     const subscribeOptions: IClientSubscribeOptions = defaultsDeep(options, DEFAULT_SUBSCRIBE_OPTIONS);
     this.client?.subscribe(topic, subscribeOptions, callback);
     return this.getSubscribeObservable<T>(topic);
+  };
+
+  private updateStatus = (status: IoTClientStatus): void => {
+    this.status = status;
+    this.status$.next(status);
   };
 
   private getSubscribeObservable = <T = any>(topic: string): Observable<T> => {

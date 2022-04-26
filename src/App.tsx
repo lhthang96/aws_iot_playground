@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { StyledContainer } from './App.styles';
 import { Amplify } from '@aws-amplify/core';
 import { IoTClient } from './services/IoTClient';
+import { useIoTClientStatus } from './hooks';
+import { IoTConnectionStatus } from './components';
 
 Amplify.configure({
   Auth: {
@@ -16,5 +18,10 @@ export const App: React.FC = () => {
   useEffect(() => {
     IoTClient.getInstance().init();
   }, []);
-  return <StyledContainer>IoT Playground</StyledContainer>;
+
+  return (
+    <StyledContainer>
+      <IoTConnectionStatus className="iot-connection-status" />
+    </StyledContainer>
+  );
 };
