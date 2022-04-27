@@ -16,7 +16,7 @@ Amplify.configure({
 
 export const App: React.FC = () => {
   useEffect(() => {
-    IoTClient.getInstance().init();
+    IoTClient.instance.init();
   }, []);
 
   return (

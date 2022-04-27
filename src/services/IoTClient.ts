@@ -1,25 +1,31 @@
 import { Auth } from '@aws-amplify/auth';
 import defaultsDeep from 'lodash.defaultsdeep';
+import dropRightWhile from 'lodash.droprightwhile';
 import mqtt, { ClientSubscribeCallback, IClientSubscribeOptions, MqttClient } from 'mqtt';
-import { BehaviorSubject, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, filter, map, Observable, Subject } from 'rxjs';
 import { AWSUtils } from './AWSUtils';
 import { IoTClientStatus } from './IoTClient.interfaces';
+
+type MQTTMessage<T = any> = {
+  topic: string;
+  payload: T;
+};
 
 const DEFAULT_SUBSCRIBE_OPTIONS: IClientSubscribeOptions = {
   qos: 0,
 };
 
 export class IoTClient {
-  private static instance: IoTClient;
+  private static _instance: IoTClient;
 
   private constructor() {}
 
-  public static getInstance(): IoTClient {
-    if (!IoTClient.instance) {
-      IoTClient.instance = new IoTClient();
+  public static get instance(): IoTClient {
+    if (!IoTClient._instance) {
+      IoTClient._instance = new IoTClient();
     }
 
-    return IoTClient.instance;
+    return IoTClient._instance;
   }
 
   /**
@@ -33,6 +39,8 @@ export class IoTClient {
    */
 
   private isFirstConnect = true;
+  private message$: Observable<MQTTMessage> | null = null;
+
   public client: MqttClient | null = null;
   public status: IoTClientStatus = 'initializing';
   public status$ = new BehaviorSubject<IoTClientStatus>('initializing');
@@ -67,33 +75,35 @@ export class IoTClient {
       this.updateStatus('reconnecting');
       console.log('Retrying to connect to AWS IoT...');
     });
+
+    this.message$ = new Observable((observer) => {
+      this.client?.on('message', (topic, payload) => {
+        observer.next({ topic, payload: JSON.parse(payload.toString()) });
+      });
+    });
   };
 
   public subscribe = <T = any>(
     topic: string,
     options?: Partial<IClientSubscribeOptions>,
     callback?: ClientSubscribeCallback
-  ): Observable<T> => {
+  ): Observable<MQTTMessage<T>> => {
+    if (!this.message$ || !this.client) throw new Error('IoT Client has not been initialized yet');
+
     const subscribeOptions: IClientSubscribeOptions = defaultsDeep(options, DEFAULT_SUBSCRIBE_OPTIONS);
-    this.client?.subscribe(topic, subscribeOptions, callback);
-    return this.getSubscribeObservable<T>(topic);
+    this.client.subscribe(topic, subscribeOptions, callback);
+    return this.message$.pipe(filter((message) => isMatchTopic(topic, message.topic)));
   };
 
   private updateStatus = (status: IoTClientStatus): void => {
     this.status = status;
     this.status$.next(status);
   };
-
-  private getSubscribeObservable = <T = any>(topic: string): Observable<T> => {
-    const observable = new Observable<T>((observer) => {
-      this.client?.on('message', (receivedTopic, message) => {
-        if (receivedTopic === topic) {
-          const parsedPayload = JSON.parse(message.toString()) as T;
-          observer.next(parsedPayload);
-        }
-      });
-    });
-
-    return observable;
-  };
 }
+
+const isMatchTopic = (topic: string, receivedTopic: string): boolean => {
+  const elements = topic.split('/');
+  const checkingElements = dropRightWhile(elements, (_, index) => elements[index - 1] === '#') as string[];
+  const receivedElements = receivedTopic.split('/');
+  return checkingElements.every((element, index) => element === '+' || element === receivedElements[index]);
+};
