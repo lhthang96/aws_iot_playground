@@ -2,14 +2,9 @@ import { Auth } from '@aws-amplify/auth';
 import defaultsDeep from 'lodash.defaultsdeep';
 import dropRightWhile from 'lodash.droprightwhile';
 import mqtt, { ClientSubscribeCallback, IClientSubscribeOptions, MqttClient } from 'mqtt';
-import { BehaviorSubject, filter, map, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, filter, Observable, Subject } from 'rxjs';
 import { AWSUtils } from './AWSUtils';
-import { IoTClientStatus } from './IoTClient.interfaces';
-
-type MQTTMessage<T = any> = {
-  topic: string;
-  payload: T;
-};
+import { IoTClientLog, IoTClientLogLevel, IoTClientStatus, MQTTMessage } from './IoTClient.interfaces';
 
 const DEFAULT_SUBSCRIBE_OPTIONS: IClientSubscribeOptions = {
   qos: 0,
@@ -44,8 +39,11 @@ export class IoTClient {
   public client: MqttClient | null = null;
   public status: IoTClientStatus = 'initializing';
   public status$ = new BehaviorSubject<IoTClientStatus>('initializing');
+  public log$ = new Subject<IoTClientLog>();
 
   public init = async (): Promise<void> => {
+    this.log('info', 'Initializing IoT Client...');
+
     const credentials = await Auth.currentCredentials();
     const signedMQTTUrl = AWSUtils.getInstance().getSignedUrl(this.host, this.region, credentials);
     this.client = mqtt.connect(signedMQTTUrl, {
@@ -57,10 +55,10 @@ export class IoTClient {
 
     this.client.on('connect', () => {
       this.updateStatus('connected');
-      console.log('Connected to AWS IoT.');
+      this.log('success', 'Connected to AWS IoT.');
 
       if (!this.isFirstConnect) {
-        console.log('Connected after disconnection');
+        this.log('success', 'Connected after disconnection.');
       }
 
       this.isFirstConnect = false;
@@ -68,12 +66,17 @@ export class IoTClient {
 
     this.client.on('error', (error) => {
       this.updateStatus('error');
-      console.log('Log on error', error);
+      this.log('error', `IoT Client error ${error.message}.`);
     });
 
     this.client.on('reconnect', () => {
       this.updateStatus('reconnecting');
-      console.log('Retrying to connect to AWS IoT...');
+      this.log('warning', 'Retrying to connect to AWS IoT...');
+    });
+
+    this.client.on('disconnect', (packet) => {
+      const { reasonCode } = packet;
+      this.log('error', `IoT Client disconnected with code ${reasonCode}.`);
     });
 
     this.message$ = new Observable((observer) => {
@@ -91,13 +94,28 @@ export class IoTClient {
     if (!this.message$ || !this.client) throw new Error('IoT Client has not been initialized yet');
 
     const subscribeOptions: IClientSubscribeOptions = defaultsDeep(options, DEFAULT_SUBSCRIBE_OPTIONS);
-    this.client.subscribe(topic, subscribeOptions, callback);
+    this.client.subscribe(topic, subscribeOptions, (error, granted) => {
+      const logMessage = error
+        ? `Failed to subscribe to topic ${topic}: ${error.message}.`
+        : `Subscribed to topic ${topic}.`;
+      this.log('default', logMessage);
+
+      callback?.(error, granted);
+    });
     return this.message$.pipe(filter((message) => isMatchTopic(topic, message.topic)));
   };
 
   private updateStatus = (status: IoTClientStatus): void => {
     this.status = status;
     this.status$.next(status);
+  };
+
+  private log = (level: IoTClientLogLevel, message: string): void => {
+    this.log$.next({
+      timestamp: new Date().getTime(),
+      level,
+      message,
+    });
   };
 }
 

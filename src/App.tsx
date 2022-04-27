@@ -1,9 +1,8 @@
+import { Amplify } from '@aws-amplify/core';
 import React, { useEffect } from 'react';
 import { StyledContainer } from './App.styles';
-import { Amplify } from '@aws-amplify/core';
-import { IoTClient } from './services/IoTClient';
-import { useIoTClientStatus } from './hooks';
 import { IoTConnectionStatus } from './components';
+import { IoTClient } from './services/IoTClient';
 
 Amplify.configure({
   Auth: {

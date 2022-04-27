@@ -4,7 +4,7 @@ import styled from 'styled-components';
 
 export const StyledIoTConnectionStatus = styled.div<{ status: IoTClientStatus }>`
   background: #fff;
-  padding: 20px 32px;
+  padding: 20px;
   border-radius: 5px;
   display: flex;
   flex-direction: column;
@@ -21,6 +21,7 @@ export const StyledIoTConnectionStatus = styled.div<{ status: IoTClientStatus }>
     width: 100%;
     display: flex;
     align-items: center;
+    margin-bottom: 24px;
 
     .iot-status-dot {
       width: 8px;
@@ -46,6 +47,74 @@ export const StyledIoTConnectionStatus = styled.div<{ status: IoTClientStatus }>
 
     .iot-status-text {
       text-transform: capitalize;
+    }
+  }
+
+  .iot-log {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+
+    .iot-log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #f5f5f5;
+      font-size: 14px;
+
+      .iot-log-header-text {
+        margin: 0;
+        font-weight: bold;
+      }
+
+      .iot-log-clear-btn {
+      }
+    }
+
+    .iot-log-content {
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+      max-height: 180px;
+      overflow: hidden auto;
+
+      .log-item {
+        display: flex;
+        align-items: flex-start;
+        font-size: 13px;
+        margin-bottom: 8px;
+
+        .log-item-timestamp {
+          width: 60px;
+        }
+
+        .log-item-level {
+          text-transform: capitalize;
+          margin-right: 6px;
+          font-weight: bold;
+
+          &.log-item-level-success {
+            color: ${COLORS.SUCCESS};
+          }
+          &.log-item-level-warning {
+            color: ${COLORS.WARNING};
+          }
+          &.log-item-level-info {
+            color: ${COLORS.INFO};
+          }
+          &.log-item-level-error {
+            color: ${COLORS.ERROR};
+          }
+        }
+
+        .log-item-message {
+          flex: 1;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
     }
   }
 `;

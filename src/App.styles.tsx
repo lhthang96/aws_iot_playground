@@ -6,6 +6,6 @@ export const StyledContainer = styled.div`
   padding: 20px;
 
   .iot-connection-status {
-    width: fit-content;
+    width: 400px;
   }
 `;
