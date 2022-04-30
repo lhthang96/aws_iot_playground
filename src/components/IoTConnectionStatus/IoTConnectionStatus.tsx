@@ -1,5 +1,4 @@
-import React, { ComponentPropsWithoutRef, createElement, useEffect, useRef } from 'react';
-import { Subscription } from 'rxjs';
+import React, { ComponentPropsWithoutRef, useEffect, useRef } from 'react';
 import { useIoTClientStatus } from 'src/hooks';
 import { IoTClient } from 'src/services/IoTClient';
 import { IoTClientLog } from 'src/services/IoTClient.interfaces';

@@ -1,12 +1,21 @@
 import { Auth } from '@aws-amplify/auth';
 import defaultsDeep from 'lodash.defaultsdeep';
 import dropRightWhile from 'lodash.droprightwhile';
-import mqtt, { ClientSubscribeCallback, IClientSubscribeOptions, MqttClient } from 'mqtt';
+import mqtt, {
+  ClientSubscribeCallback,
+  IClientPublishOptions,
+  IClientSubscribeOptions,
+  MqttClient,
+  PacketCallback,
+} from 'mqtt';
 import { BehaviorSubject, filter, Observable, Subject } from 'rxjs';
 import { AWSUtils } from './AWSUtils';
 import { IoTClientLog, IoTClientLogLevel, IoTClientStatus, MQTTMessage } from './IoTClient.interfaces';
 
 const DEFAULT_SUBSCRIBE_OPTIONS: IClientSubscribeOptions = {
+  qos: 0,
+};
+const DEFAULT_PUBLISH_OPTIONS: IClientPublishOptions = {
   qos: 0,
 };
 
@@ -103,6 +112,17 @@ export class IoTClient {
       callback?.(error, granted);
     });
     return this.message$.pipe(filter((message) => isMatchTopic(topic, message.topic)));
+  };
+
+  public publish = (
+    topic: string,
+    message: string | Buffer,
+    options?: IClientPublishOptions,
+    callback?: PacketCallback
+  ): void => {
+    if (!this.client || this.status !== 'connected') throw new Error('IoT Client has not been initialized yet');
+    const publishOptions: IClientPublishOptions = defaultsDeep(options, DEFAULT_PUBLISH_OPTIONS);
+    this.client.publish(topic, message, publishOptions, callback);
   };
 
   private updateStatus = (status: IoTClientStatus): void => {

@@ -82,11 +82,11 @@ export const StyledIoTConnectionStatus = styled.div<{ status: IoTClientStatus }>
       .log-item {
         display: flex;
         align-items: flex-start;
-        font-size: 13px;
-        margin-bottom: 8px;
+        font-size: 14px;
+        margin-bottom: 4px;
 
         .log-item-timestamp {
-          width: 60px;
+          width: 64px;
         }
 
         .log-item-level {
