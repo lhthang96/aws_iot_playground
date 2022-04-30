@@ -50,6 +50,12 @@ export class IoTClient {
   public status$ = new BehaviorSubject<IoTClientStatus>('initializing');
   public log$ = new Subject<IoTClientLog>();
 
+  /**
+   * Handle reconnection
+   */
+  private retryTimes = 0;
+  private readonly DEFAULT_RETRY_DURATION = 3 * 1000;
+
   public init = async (): Promise<void> => {
     this.log('info', 'Initializing IoT Client...');
 
@@ -71,6 +77,7 @@ export class IoTClient {
       }
 
       this.isFirstConnect = false;
+      this.retryTimes = 0;
     });
 
     this.client.on('error', (error) => {
@@ -79,8 +86,12 @@ export class IoTClient {
     });
 
     this.client.on('reconnect', () => {
+      this.retryTimes += 1;
       this.updateStatus('reconnecting');
-      this.log('warning', 'Retrying to connect to AWS IoT...');
+      this.log('warning', `Retrying to connect to AWS IoT... [Attempt: ${this.retryTimes}]`);
+      if (this.client) {
+        this.client.options.reconnectPeriod = this.retryTimes * this.DEFAULT_RETRY_DURATION;
+      }
     });
 
     this.client.on('disconnect', (packet) => {
