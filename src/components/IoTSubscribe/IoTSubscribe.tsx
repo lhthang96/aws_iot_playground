@@ -14,7 +14,7 @@ export const IoTSubscribe: React.FC<IoTSubscribeProps> = (props) => {
   const refSubscriptions = useRef<Subscription[]>([]);
 
   const subscribeToTopic = (topic: string): void => {
-    const subscription = IoTClient.instance.subscribe(topic).subscribe({
+    const subscription = IoTClient.instance.subscribe({ topic }).subscribe({
       next: (message) => {
         if (!refLogContainer.current) return;
         const log = JSON.stringify(message.payload?.message, undefined, 2);

@@ -15,8 +15,9 @@ export type IoTClientLog = {
   message: string;
 };
 
-export type SubscribeRequestParams = {
+export type SubscribeParams = {
   topic: string;
+  subscribeId?: string;
   options?: Partial<IClientSubscribeOptions>;
   callback?: ClientSubscribeCallback;
 };

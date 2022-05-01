@@ -8,15 +8,9 @@ import mqtt, {
   MqttClient,
   PacketCallback,
 } from 'mqtt';
-import { BehaviorSubject, filter, finalize, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, filter, finalize, Observable, Subject, switchMapTo, timer, interval, take } from 'rxjs';
 import { AWSUtils } from './AWSUtils';
-import {
-  IoTClientLog,
-  IoTClientLogLevel,
-  IoTClientStatus,
-  MQTTMessage,
-  SubscribeRequestParams,
-} from './IoTClient.interfaces';
+import { IoTClientLog, IoTClientLogLevel, IoTClientStatus, MQTTMessage, SubscribeParams } from './IoTClient.interfaces';
 
 const DEFAULT_SUBSCRIBE_OPTIONS: IClientSubscribeOptions = {
   qos: 0,
@@ -59,7 +53,7 @@ export class IoTClient {
    */
   private retryTimes = 0;
   private readonly DEFAULT_RETRY_DURATION = 3 * 1000;
-  private subscribingRequests: { [id: string]: SubscribeRequestParams } = {};
+  private subscribingRequests: { [id: string]: SubscribeParams } = {};
 
   public init = async (): Promise<void> => {
     this.log('info', 'Initializing IoT Client...');
@@ -71,18 +65,30 @@ export class IoTClient {
         const reconnectSignedMQTTUrl = AWSUtils.getInstance().getSignedUrl(this.host, this.region, credentials);
         return reconnectSignedMQTTUrl;
       },
+      /**
+       * Ref: https://ap-northeast-1.console.aws.amazon.com/servicequotas/home/services/iotcore/quotas/L-A6574E9E
+       * AWS IoT Broker limits subscriptions per request to 8. It means, if you send a subscribe request with 9 or above
+       * subscriptions, your client will be disconnected.
+       *
+       * By default of mqtt.js, `resubscribe` is set to true, it will resubscribe to all subscribing topics after reconnected,
+       * but it only sends one subscribe request to the broker. Therefore, if you subscribed to 9 or more topics,
+       * when you reconnected after a disconnection, mqtt.js will send a subscribe request which includes all the topics
+       * that you subscribed. As a result:
+       *  1. Your client will be disconnected
+       *  2. Your client reconnected, then send a resubscribe request with 9 or more topics
+       *  3. Back to step 1
+       *
+       * To avoid this unexpected behavior, we can turn off the `resubscribe` option and handle the resubscribe by ourself
+       */
+      resubscribe: false,
+      // Send pingreq for every 10 seconds
+      keepalive: 10,
     });
 
     this.client.on('connect', () => {
       this.updateStatus('connected');
       this.log('success', 'Connected to AWS IoT.');
-
-      // Resubscribe topics
-      Object.values(this.subscribingRequests).forEach((request) => {
-        const { topic, options, callback } = request;
-        this.subscribe(topic, options, callback);
-      });
-
+      this.resubscribeTopics();
       this.retryTimes = 0;
     });
 
@@ -108,26 +114,22 @@ export class IoTClient {
     this.message$ = new Observable((observer) => {
       this.client?.on('message', (topic, payload) => {
         observer.next({ topic, payload: JSON.parse(payload.toString()) });
-        observer.unsubscribe();
       });
     });
   };
 
-  public subscribe = <T = any>(
-    topic: string,
-    options?: Partial<IClientSubscribeOptions>,
-    callback?: ClientSubscribeCallback
-  ): Observable<MQTTMessage<T>> => {
+  public subscribe = <T = any>(params: SubscribeParams): Observable<MQTTMessage<T>> => {
+    const { topic, subscribeId = getBaseId(), options, callback } = params;
     if (!isValidTopic(topic)) throw new Error('Invalid topic');
 
     if (!this.message$ || !this.client) throw new Error('IoT Client has not been initialized yet');
 
-    const subscribeOptions: IClientSubscribeOptions = defaultsDeep(options, DEFAULT_SUBSCRIBE_OPTIONS);
-
     // Put to queue for resubscribing after disconnected
-    const subscribeId = Math.random().toString();
-    this.saveSubscribeRequest(subscribeId, { topic, options: subscribeOptions, callback });
+    if (!this.subscribingRequests[subscribeId]) {
+      this.saveSubscribeRequest({ topic, subscribeId, options, callback });
+    }
 
+    const subscribeOptions: IClientSubscribeOptions = defaultsDeep(options, DEFAULT_SUBSCRIBE_OPTIONS);
     this.client.subscribe(topic, subscribeOptions, (error, granted) => {
       const logLevel = error ? 'error' : 'default';
       const logMessage = error
@@ -173,12 +175,21 @@ export class IoTClient {
     });
   };
 
-  private saveSubscribeRequest = (subscribeId: string, request: SubscribeRequestParams): void => {
-    this.subscribingRequests[subscribeId] = request;
+  private saveSubscribeRequest = (params: SubscribeParams): void => {
+    const { subscribeId } = params;
+    if (subscribeId) {
+      this.subscribingRequests[subscribeId] = params;
+    }
   };
 
-  private removeSubscribeRequest = (requestId: string): void => {
-    delete this.subscribingRequests[requestId];
+  private removeSubscribeRequest = (subscribeId: string): void => {
+    delete this.subscribingRequests[subscribeId];
+  };
+
+  private resubscribeTopics = (): void => {
+    Object.values(this.subscribingRequests).forEach((subscribeRequest) => {
+      this.subscribe(subscribeRequest);
+    });
   };
 }
 
@@ -195,4 +206,8 @@ const isValidTopic = (topic: string): boolean => {
   // Check limited quantity of "/"
 
   return true;
+};
+
+const getBaseId = (): string => {
+  return Math.random().toString();
 };

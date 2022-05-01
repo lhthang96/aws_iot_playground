@@ -25,7 +25,7 @@ export const SubscribeMultipleTopics: React.FC<SubscribeMultipleTopicsProps> = (
     let i = 1;
     const timePerSubscription = (duration * 1000) / quantity;
     const interval = window.setInterval(() => {
-      const subscription = IoTClient.instance.subscribe(`${TEST_TOPIC}/${i}`).subscribe({
+      const subscription = IoTClient.instance.subscribe({ topic: `${TEST_TOPIC}/${i}` }).subscribe({
         next: ({ topic, payload }) => {
           if (!refLogContainer.current) return;
           const log = JSON.stringify(payload?.message);
@@ -47,9 +47,9 @@ export const SubscribeMultipleTopics: React.FC<SubscribeMultipleTopicsProps> = (
       i++;
       if (i > quantity) {
         window.clearInterval(interval);
+        setDisabled(false);
       }
     }, timePerSubscription);
-    setDisabled(false);
   };
 
   const clearSubscriptions = (): void => {

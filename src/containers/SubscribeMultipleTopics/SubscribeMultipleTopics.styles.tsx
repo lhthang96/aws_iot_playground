@@ -18,6 +18,7 @@ export const StyledSubscribeMultipleTopics = styled.div`
     padding: 20px;
     box-shadow: inset 0 0 4px 1px rgba(0, 0, 0, 0.2);
     position: relative;
+    background: #fff;
 
     .iot-logs-display {
       width: 100%;

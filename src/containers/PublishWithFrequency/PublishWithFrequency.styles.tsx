@@ -10,6 +10,5 @@ export const StyledPublishWithFrequency = styled.div`
   }
 
   .iot-subscribe {
-    height: 480px;
   }
 `;

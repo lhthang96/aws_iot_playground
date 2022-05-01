@@ -5,6 +5,7 @@ export const StyledContainer = styled.div`
   height: 100vh;
   padding: 20px;
   display: flex;
+  background: #c3e0ea;
 
   .sidebar {
     width: 400px;
