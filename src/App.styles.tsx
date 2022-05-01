@@ -6,9 +6,26 @@ export const StyledContainer = styled.div`
   padding: 20px;
   display: flex;
 
-  .iot-connection-status {
+  .sidebar {
     width: 400px;
-    height: fit-content;
+    height: 100%;
+
+    .iot-connection-status {
+      width: 100%;
+      height: fit-content;
+      margin-bottom: 40px;
+    }
+
+    .scenario-picker {
+      flex: 1;
+      overflow: hidden auto;
+      display: flex;
+      flex-direction: column;
+
+      .scenario-btn {
+        margin-bottom: 16px;
+      }
+    }
   }
 
   .content {

@@ -2,6 +2,7 @@ import React, { ComponentPropsWithoutRef, useEffect, useRef } from 'react';
 import { useIoTClientStatus } from 'src/hooks';
 import { IoTClient } from 'src/services/IoTClient';
 import { IoTClientLog } from 'src/services/IoTClient.interfaces';
+import { getTimestamp } from 'src/utils';
 import { StyledIoTConnectionStatus } from './IoTConnectionStatus.styles';
 
 const NO_LOG_TEXT = 'There is no log from IoT Client';
@@ -67,7 +68,7 @@ const createLogItem = (log: IoTClientLog): HTMLParagraphElement => {
   // Timestamp
   const timestamp = document.createElement('span');
   timestamp.setAttribute('class', 'log-item-timestamp');
-  timestamp.innerText = new Date(log.timestamp).toTimeString().split(' ')[0];
+  timestamp.innerText = getTimestamp(log.timestamp);
   logItem.appendChild(timestamp);
 
   // Level

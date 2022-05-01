@@ -80,16 +80,16 @@ export const StyledIoTConnectionStatus = styled.div<{ status: IoTClientStatus }>
       overflow: hidden auto;
 
       .log-item {
-        display: flex;
-        align-items: flex-start;
         font-size: 14px;
         margin-bottom: 4px;
 
         .log-item-timestamp {
+          display: inline-block;
           width: 64px;
         }
 
         .log-item-level {
+          display: inline-block;
           text-transform: capitalize;
           margin-right: 6px;
           font-weight: bold;
@@ -109,10 +109,6 @@ export const StyledIoTConnectionStatus = styled.div<{ status: IoTClientStatus }>
         }
 
         .log-item-message {
-          flex: 1;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
       }
     }

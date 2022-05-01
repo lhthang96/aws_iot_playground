@@ -2,6 +2,7 @@ import React, { ComponentPropsWithoutRef, useEffect, useRef, useState } from 're
 import { IoTClient } from 'src/services/IoTClient';
 import { StyledSubscribeMultipleTopics } from './SubscribeMultipleTopics.styles';
 import { Subscription } from 'rxjs';
+import { getTimestamp } from 'src/utils';
 
 type SubscribeMultipleTopicsProps = ComponentPropsWithoutRef<'div'>;
 
@@ -28,8 +29,9 @@ export const SubscribeMultipleTopics: React.FC<SubscribeMultipleTopicsProps> = (
         next: ({ topic, payload }) => {
           if (!refLogContainer.current) return;
           const log = JSON.stringify(payload?.message);
+          const timestamp = getTimestamp();
           const logElement = document.createElement('pre');
-          logElement.innerText = `[${topic}]: ${log}`;
+          logElement.innerText = `${timestamp} - [${topic}]: ${log}`;
           refLogContainer.current?.appendChild(logElement);
           refLogContainer.current.scrollTop = refLogContainer.current.scrollHeight;
 

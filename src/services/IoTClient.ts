@@ -8,9 +8,15 @@ import mqtt, {
   MqttClient,
   PacketCallback,
 } from 'mqtt';
-import { BehaviorSubject, filter, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, filter, finalize, Observable, Subject } from 'rxjs';
 import { AWSUtils } from './AWSUtils';
-import { IoTClientLog, IoTClientLogLevel, IoTClientStatus, MQTTMessage } from './IoTClient.interfaces';
+import {
+  IoTClientLog,
+  IoTClientLogLevel,
+  IoTClientStatus,
+  MQTTMessage,
+  SubscribeRequestParams,
+} from './IoTClient.interfaces';
 
 const DEFAULT_SUBSCRIBE_OPTIONS: IClientSubscribeOptions = {
   qos: 0,
@@ -41,8 +47,6 @@ export class IoTClient {
   /**
    * IoT Client states
    */
-
-  private isFirstConnect = true;
   private message$: Observable<MQTTMessage> | null = null;
 
   public client: MqttClient | null = null;
@@ -55,6 +59,7 @@ export class IoTClient {
    */
   private retryTimes = 0;
   private readonly DEFAULT_RETRY_DURATION = 3 * 1000;
+  private subscribingRequests: { [id: string]: SubscribeRequestParams } = {};
 
   public init = async (): Promise<void> => {
     this.log('info', 'Initializing IoT Client...');
@@ -72,11 +77,12 @@ export class IoTClient {
       this.updateStatus('connected');
       this.log('success', 'Connected to AWS IoT.');
 
-      if (!this.isFirstConnect) {
-        this.log('success', 'Connected after disconnection.');
-      }
+      // Resubscribe topics
+      Object.values(this.subscribingRequests).forEach((request) => {
+        const { topic, options, callback } = request;
+        this.subscribe(topic, options, callback);
+      });
 
-      this.isFirstConnect = false;
       this.retryTimes = 0;
     });
 
@@ -102,6 +108,7 @@ export class IoTClient {
     this.message$ = new Observable((observer) => {
       this.client?.on('message', (topic, payload) => {
         observer.next({ topic, payload: JSON.parse(payload.toString()) });
+        observer.unsubscribe();
       });
     });
   };
@@ -111,18 +118,35 @@ export class IoTClient {
     options?: Partial<IClientSubscribeOptions>,
     callback?: ClientSubscribeCallback
   ): Observable<MQTTMessage<T>> => {
+    if (!isValidTopic(topic)) throw new Error('Invalid topic');
+
     if (!this.message$ || !this.client) throw new Error('IoT Client has not been initialized yet');
 
     const subscribeOptions: IClientSubscribeOptions = defaultsDeep(options, DEFAULT_SUBSCRIBE_OPTIONS);
+
+    // Put to queue for resubscribing after disconnected
+    const subscribeId = Math.random().toString();
+    this.saveSubscribeRequest(subscribeId, { topic, options: subscribeOptions, callback });
+
     this.client.subscribe(topic, subscribeOptions, (error, granted) => {
+      const logLevel = error ? 'error' : 'default';
       const logMessage = error
         ? `Failed to subscribe to topic ${topic}: ${error.message}.`
-        : `Subscribed to topic ${topic}.`;
-      this.log('default', logMessage);
+        : `Subscribed to topic ${topic} [subscribeId: ${subscribeId}].`;
+      this.log(logLevel, logMessage);
 
       callback?.(error, granted);
     });
-    return this.message$.pipe(filter((message) => isMatchTopic(topic, message.topic)));
+
+    return this.message$.pipe(
+      filter((message) => isMatchTopic(topic, message.topic)),
+      // When subscriber unsubscribe or get an error -> remove this request -> this request won't be resubscribe if
+      // the client is reconnected after a disconnection
+      finalize(() => {
+        this.removeSubscribeRequest(subscribeId);
+        this.log('default', `Unsubscribed from topic ${topic} [subscribeId: ${subscribeId}]`);
+      })
+    );
   };
 
   public publish = (
@@ -148,6 +172,14 @@ export class IoTClient {
       message,
     });
   };
+
+  private saveSubscribeRequest = (subscribeId: string, request: SubscribeRequestParams): void => {
+    this.subscribingRequests[subscribeId] = request;
+  };
+
+  private removeSubscribeRequest = (requestId: string): void => {
+    delete this.subscribingRequests[requestId];
+  };
 }
 
 const isMatchTopic = (topic: string, receivedTopic: string): boolean => {
@@ -155,4 +187,12 @@ const isMatchTopic = (topic: string, receivedTopic: string): boolean => {
   const checkingElements = dropRightWhile(elements, (_, index) => elements[index - 1] === '#') as string[];
   const receivedElements = receivedTopic.split('/');
   return checkingElements.every((element, index) => element === '+' || element === receivedElements[index]);
+};
+
+const isValidTopic = (topic: string): boolean => {
+  // Check topic with wildcard #
+
+  // Check limited quantity of "/"
+
+  return true;
 };

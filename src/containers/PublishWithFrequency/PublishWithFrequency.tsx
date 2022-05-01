@@ -35,7 +35,7 @@ export const PublishWithFrequency: React.FC<PublishWithFrequencyProps> = (props)
             id="quantity-input"
             type="number"
             value={quantity}
-            onChange={(event): void => setQuantity(parseInt(event.target.value))}
+            onChange={(event): void => setQuantity(parseInt(event.target.value) || 0)}
             style={{ marginRight: 16 }}
           />
           <label htmlFor="duration-input" style={{ marginRight: 8 }}>
@@ -45,7 +45,7 @@ export const PublishWithFrequency: React.FC<PublishWithFrequencyProps> = (props)
             id="duration-input"
             type="number"
             value={duration}
-            onChange={(event): void => setDuration(parseInt(event.target.value))}
+            onChange={(event): void => setDuration(parseInt(event.target.value) || 0)}
           />
         </div>
         <button onClick={(): void => publishMessages(quantity, duration)} className="iot-publish-btn">

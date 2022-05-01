@@ -22,10 +22,23 @@ export const StyledIoTSubscribe = styled.div`
     }
   }
 
-  .subscribe-log {
-    flex: 1;
+  .iot-logs {
+    height: 480px;
     width: 100%;
+    padding: 20px;
     box-shadow: inset 0 0 4px 1px rgba(0, 0, 0, 0.2);
-    overflow: hidden auto;
+    position: relative;
+
+    .iot-logs-display {
+      width: 100%;
+      height: 100%;
+      overflow: hidden auto;
+    }
+
+    .iot-clear-btn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+    }
   }
 `;
