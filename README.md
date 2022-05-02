@@ -2,6 +2,52 @@
 
 A testing place with AWS IoT Core by connecting to AWS IoT Broker via `mqtt.js` instead of using @aws-amplify/pubsub
 
+# Context
+
+In the current project, we are using AWS Amplify PubSub service for connecting to the IoT Broker. However, we are experiencing an unexpected behavior that PubSub cannot reconnect to the broker once it lost the connection (due to losing internet connection). It just throws an error with error code 8. AWS PubSub documentation doesn't provide any instruction for the reconnection.
+
+We had been searching for a solution and ended up with another approach suggested by [this comment](https://github.com/aws-amplify/amplify-js/issues/3039#issuecomment-599365164) from the [PubSub reconnect issue](https://github.com/aws-amplify/amplify-js/issues/3039). This project is a testing place for that approach.
+
+# Setup
+
+This project uses AWS Cognito for authentication and authorization, to keep it simple, we can configure a identity pool to allow unauthenticated identities.
+
+Ref: https://serverlessguru.com/blog/part-one-serverless-real-time-reactjs-app-aws-iot-mqtt
+
+But instead of using amplify pubsub service, we will connect to AWS IoT Broker via `mqtt.js`.
+
+After follow the setup above, create a `.env` file in the root directory
+
+```env
+REACT_APP_IDENTITY_POOL_ID = your_identity_pool_id
+REACT_APP_REGION = your_aws_region
+REACT_APP_USER_POOL_ID = your_user_pool_id
+REACT_APP_USER_POOL_WEB_CLIENT_ID  = your_web_client_id
+REACT_APP_IOT_ENDPOINT = your_iot_endpoint // a4d45xxxx.iot.ap-southeast-1.amazonaws.com
+```
+
+Then run script commands for starting dev server
+
+```shell
+yarn install
+```
+
+```shell
+yarn dev
+```
+
+# Implementation
+
+## AWSUtils.ts
+
+A class service for signing a request url using query parameters.
+
+Ref: https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
+
+## IoTClient.ts
+
+A class service for initializing MQTT client to connect to AWS IoT Broker, using `AWSUtils` service to sign the wss url.
+
 # Testing scenarios
 
 ## AWS IAM Policy
