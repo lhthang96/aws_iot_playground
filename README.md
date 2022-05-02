@@ -10,7 +10,7 @@ We had been searching for a solution and ended up with another approach suggeste
 
 # Setup
 
-This project uses AWS Cognito for authentication and authorization, to keep it simple, we can configure an identity pool to allow unauthenticated identities.
+This project uses AWS Cognito for authentication, to keep it simple, we can configure an identity pool to allow unauthenticated identities.
 
 Ref: https://serverlessguru.com/blog/part-one-serverless-real-time-reactjs-app-aws-iot-mqtt
 
