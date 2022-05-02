@@ -5,14 +5,14 @@ import { StyledPublishWithFrequency } from './PublishWithFrequency.styles';
 
 type PublishWithFrequencyProps = ComponentPropsWithoutRef<'div'>;
 
-const TEST_TOPIC = 'dt/test';
+const TEST_TOPIC = 'dt/test/1';
 
 export const PublishWithFrequency: React.FC<PublishWithFrequencyProps> = (props) => {
   const [quantity, setQuantity] = useState<number>(100);
   const [duration, setDuration] = useState<number>(1);
 
   const publishMessages = (quantity: number, duration: number): void => {
-    const timePerMessage = duration / quantity;
+    const timePerMessage = (duration * 1000) / quantity;
     let i = 1;
     const interval = window.setInterval(() => {
       const payload = { message: `This is payload with index ${i}` };
