@@ -10,13 +10,13 @@ We had been searching for a solution and ended up with another approach suggeste
 
 # Setup
 
-This project uses AWS Cognito for authentication and authorization, to keep it simple, we can configure a identity pool to allow unauthenticated identities.
+This project uses AWS Cognito for authentication and authorization, to keep it simple, we can configure an identity pool to allow unauthenticated identities.
 
 Ref: https://serverlessguru.com/blog/part-one-serverless-real-time-reactjs-app-aws-iot-mqtt
 
 But instead of using amplify pubsub service, we will connect to AWS IoT Broker via `mqtt.js`.
 
-After follow the setup above, create a `.env` file in the root directory
+Following the setup above and create a `.env` file in the root directory
 
 ```env
 REACT_APP_IDENTITY_POOL_ID = your_identity_pool_id
