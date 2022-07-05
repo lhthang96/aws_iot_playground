@@ -8,11 +8,18 @@ import mqtt, {
   MqttClient,
   PacketCallback,
 } from 'mqtt';
-import { BehaviorSubject, filter, finalize, Observable, Subject, switchMapTo, timer, interval, take } from 'rxjs';
+import { BehaviorSubject, filter, finalize, Observable, Subject } from 'rxjs';
 import { AWSUtils } from './AWSUtils';
-import { IoTClientLog, IoTClientLogLevel, IoTClientStatus, MQTTMessage, SubscribeParams } from './IoTClient.interfaces';
+import {
+  IoTClientLog,
+  IoTClientLogLevel,
+  IoTClientStatus,
+  MQTTMessage,
+  MQTTSubscribeOptions,
+  SubscribeParams,
+} from './IoTClient.interfaces';
 
-const DEFAULT_SUBSCRIBE_OPTIONS: IClientSubscribeOptions = {
+const DEFAULT_SUBSCRIBE_OPTIONS: MQTTSubscribeOptions = {
   qos: 0,
 };
 const DEFAULT_PUBLISH_OPTIONS: IClientPublishOptions = {
@@ -116,17 +123,29 @@ export class IoTClient {
         observer.next({ topic, payload: JSON.parse(payload.toString()) });
       });
     });
+
+    this.client.on('packetreceive', (packet) => {
+      console.log('Received packet', { packet });
+    });
+
+    this.client.on('packetsend', (packet) => {
+      console.log('Send packet', { packet });
+    });
   };
 
-  public subscribe = <T = any>(params: SubscribeParams): Observable<MQTTMessage<T>> => {
-    const { topic, subscribeId = getBaseId(), options, callback } = params;
+  public subscribe = <T = any>(
+    topic: string,
+    options?: MQTTSubscribeOptions,
+    callback?: ClientSubscribeCallback
+  ): Observable<MQTTMessage<T>> => {
+    const { subscribeId = getBaseId() } = options || {};
     if (!isValidTopic(topic)) throw new Error('Invalid topic');
 
     if (!this.message$ || !this.client) throw new Error('IoT Client has not been initialized yet');
 
     // Put to queue for resubscribing after disconnected
     if (!this.subscribingRequests[subscribeId]) {
-      this.saveSubscribeRequest({ topic, subscribeId, options, callback });
+      this.saveSubscribeRequest(topic, options, callback);
     }
 
     const subscribeOptions: IClientSubscribeOptions = defaultsDeep(options, DEFAULT_SUBSCRIBE_OPTIONS);
@@ -175,10 +194,14 @@ export class IoTClient {
     });
   };
 
-  private saveSubscribeRequest = (params: SubscribeParams): void => {
-    const { subscribeId } = params;
+  private saveSubscribeRequest = (
+    topic: string,
+    options?: MQTTSubscribeOptions,
+    callback?: ClientSubscribeCallback
+  ): void => {
+    const { subscribeId } = options || {};
     if (subscribeId) {
-      this.subscribingRequests[subscribeId] = params;
+      this.subscribingRequests[subscribeId] = { topic, options, callback };
     }
   };
 
@@ -188,7 +211,8 @@ export class IoTClient {
 
   private resubscribeTopics = (): void => {
     Object.values(this.subscribingRequests).forEach((subscribeRequest) => {
-      this.subscribe(subscribeRequest);
+      const { topic, options, callback } = subscribeRequest || {};
+      this.subscribe(topic, options, callback);
     });
   };
 }
