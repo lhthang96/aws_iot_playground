@@ -90,6 +90,12 @@ export class IoTClient {
       resubscribe: false,
       // Send pingreq for every 10 seconds
       keepalive: 10,
+
+      /**
+       * If true, MQTT client won't send the ping if it is publishing messages to broker.
+       * If false, the client keeps pinging for every keepalive duration
+       */
+      reschedulePings: false,
     });
 
     this.client.on('connect', () => {
